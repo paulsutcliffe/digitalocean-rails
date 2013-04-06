@@ -1,0 +1,45 @@
+!!!
+%html
+  %head
+    %title= page_title
+    == <meta name="keywords" content="" />
+    == <meta name="description" content="" />
+    == <meta name="googlebot" content="index,follow" />
+    == <meta name="robots" content="index,follow" />
+    == <meta name="Revisit-After" content="7 days" />
+    == <meta name="city" content="Lima" />
+    == <meta name="country" content="Peru" />
+    == <meta name="state" content="Lima" />
+    == <meta name="zip code" content="Lima18" />
+    == <meta name="subject" content="" />
+    == <meta name="author" content="Kosmyka.com" />
+    == <meta name="copyright" content="&copy;Todos los derechos reservados." />
+    == <meta name="geo.placename" content="Lima, Peru" />
+    == <meta name="geo.region" content="PE-Lima" />
+    == <meta name="author" content="humans.txt" />
+
+    = favicon_link_tag 'favicon.png'
+
+    = stylesheet_link_tag '/stylesheets/screen.css'
+    = yield :css
+
+    = javascript_include_tag :defaults
+    = yield :scripts
+
+    /[if lt IE 9]
+      = javascript_include_tag "http://html5shim.googlecode.com/svn/trunk/html5.js"
+
+    /[if lt IE 9]
+      %script{:src => 'http://html5shim.googlecode.com/svn/trunk/html5.js'}
+    = csrf_meta_tag
+
+
+  %body
+    - if notice
+      %p.notice= notice
+
+    %header{:role => 'banner'}
+      .wrapper
+        %h1 Ruby on Rails Rules
+    %section#content{:role => 'main'}
+      = yield

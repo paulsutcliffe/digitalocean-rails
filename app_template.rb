@@ -1,11 +1,13 @@
 remove_file "README.rdoc"
 create_file "README.md", "TODO"
 
+
+
 #Replace the layout for a Haml layout
 run "rm app/views/layouts/application.html.erb"
-get "https://raw.github.com/paulsutcliffe/digitalocean-rails/master/app/views/layouts/application.html.haml", "app/views/layouts/application.html.haml"
+run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/app/views/layouts/application.html.haml' -O app/views/layouts/application.html.haml"
 
-get "https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt", "public/humans.txt"
+run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
 
 #Setup extra gems
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
@@ -135,6 +137,7 @@ namespace :deploy do
   end
 
   task :setup_config, roles: :app do
+    sudo "rm /etc/nginx/sites-enabled/default"
     sudo "ln -nfs #{current_path}/config/nginx.conf /etc/nginx/sites-enabled/#{application}"
     sudo "ln -nfs #{current_path}/config/unicorn_init.sh /etc/init.d/unicorn_#{application}"
     run "mkdir -p #{shared_path}/config"
@@ -289,7 +292,7 @@ git :init
 append_file ".gitignore", "config/database.yml"
 run "cp config/database.yml config/database.example.yml"
 git add: ".", commit: "-m 'initial commit'"
-git push origin master
+#git push origin master
 if yes? "Do you want to deploy:setup?(yes/no)"
   cap deploy:setup
 end
