@@ -3,9 +3,9 @@ create_file "README.md", "TODO"
 
 #Replace the layout for a Haml layout
 run "rm app/views/layouts/application.html.erb"
-#get "https://raw.github.com/paulsutcliffe/digitalocean-rails/master/app/views/layouts/application.html.haml", "app/views/layouts/application.html.haml"
+get "https://raw.github.com/paulsutcliffe/digitalocean-rails/master/app/views/layouts/application.html.haml", "app/views/layouts/application.html.haml"
 
-#get "https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt", "public/humans.txt"
+get "https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt", "public/humans.txt"
 
 #Setup extra gems
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
