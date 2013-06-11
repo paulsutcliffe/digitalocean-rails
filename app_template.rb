@@ -132,6 +132,10 @@ current_path = '#{current_path}'
 shared_path = '#{shared_path}'
 release_path = '#{release_path}'
 trysudo = '#{try_sudo}'
+rootpassword = '#{root_password}'
+dbname = '#{db_name}'
+dbuser = '#{db_user}'
+dbpass = '#{db_pass}'
 github_user = ask("Please enter your Github's username")
 
 file "config/deploy.rb", <<-CODE
@@ -178,8 +182,8 @@ namespace :deploy do
     set :db_pass, Capistrano::CLI.password_prompt("Password: ")
     set :db_name, Capistrano::CLI.ui.ask("Database name: ")
 
-    run "mysql --user=root --password=#{root_password} -e \"CREATE DATABASE IF NOT EXISTS #{db_name}\""
-    run "mysql --user=root --password=#{root_password} -e \"GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'localhost' IDENTIFIED BY '#{db_pass}' WITH GRANT OPTION\""
+    run "mysql --user=root --password=#{rootpassword} -e \"CREATE DATABASE IF NOT EXISTS #{dbname}\""
+    run "mysql --user=root --password=#{rootpassword} -e \"GRANT ALL PRIVILEGES ON #{dbname}.* TO '#{dbuser}'@'localhost' IDENTIFIED BY '#{dbpass}' WITH GRANT OPTION\""
   end
 
   task :setup_config, roles: :app do
