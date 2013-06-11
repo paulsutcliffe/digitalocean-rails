@@ -169,6 +169,9 @@ namespace :bundler do
   desc "|DarkRecipes| Runs bundle install on the app server (internal task)"
   task :install, :roles => :app, :except => { :no_release => true } do
     run "cd #{current_path} && bundle install --deployment --without=development test"
+    if File.exist? "/#{current_path}/bin/unicorn"
+      run "cd #{current_path} && bundle install -—binstubs"
+    end
   end
 end
 
@@ -187,15 +190,14 @@ namespace :deploy do
   end
 
   task :setup_config, roles: :app do
-    if File.exist? '/etc/nginx/sites-enabled/default'
+    if File.exist? ""/etc/nginx/sites-enabled/default"
       sudo "rm /etc/nginx/sites-enabled/default"
     end
     sudo "ln -nfs #{current_path}/config/nginx.conf /etc/nginx/sites-enabled/#{application}"
     sudo "ln -nfs #{current_path}/config/unicorn_init.sh /etc/init.d/unicorn_#{application}"
-    sudo "bundle install -—binstubs"
   end
   before "deploy:cold", "deploy:create_database"
-  after "deploy:setup", "deploy:setup_config"
+  after "deploy:cold", "deploy:setup_config"
 
   desc "Make sure local git is in sync with remote."
   task :check_revision, roles: :web do
@@ -223,7 +225,7 @@ upstream unicorn {
 server {
   listen 80 default deferred;
   server_name #{cap_server};
-  root /var/www/app_name.camelize(:lower)/current/public;
+  root /var/www/#{app_name.camelize(:lower)}/current/public;
 
   location ^~ /assets/ {
     gzip_static on;
