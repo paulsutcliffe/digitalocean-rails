@@ -131,6 +131,7 @@ user = '#{user}'
 current_path = '#{current_path}'
 shared_path = '#{shared_path}'
 release_path = '#{release_path}'
+trysudo = '#{try_sudo}'
 github_user = ask("Please enter your Github's username")
 
 file "config/deploy.rb", <<-CODE
@@ -158,7 +159,7 @@ ssh_options[:forward_agent] = true
 namespace :bundler do
   desc "|DarkRecipes| Installs bundler gem to your server"
   task :setup, :roles => :app do
-    run "if ! gem list | grep --silent -e 'bundler'; then #{try_sudo} gem uninstall bundler; #{try_sudo} gem install --no-rdoc --no-ri bundler; fi"
+    run "if ! gem list | grep --silent -e 'bundler'; then #{trysudo} gem uninstall bundler; #{trysudo} gem install --no-rdoc --no-ri bundler; fi"
   end
 
   desc "|DarkRecipes| Runs bundle install on the app server (internal task)"
