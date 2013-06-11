@@ -2,7 +2,6 @@
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
 
 #Setup extra gems
-gem 'sass-rails', '~> 3.2', group: :assets
 gem 'bootstrap-sass', '~> 2.3.1.0', group: :assets
 
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
