@@ -1,22 +1,31 @@
-remove_file "README.rdoc"
-create_file "README.md", "TODO"
-
-
-
-#Replace the layout for a Haml layout
-run "rm app/views/layouts/application.html.erb"
-run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/app/views/layouts/application.html.haml' -O app/views/layouts/application.html.haml"
-
+# coding: utf-8
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
 
 #Setup extra gems
+gem 'sass-rails', '~> 3.2', group: :assets
+gem 'bootstrap-sass', '~> 2.3.1.0', group: :assets
+
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
-gem 'haml'
-gem 'haml-rails'
-gem 'will_paginate'
-gem 'inherited_resources'
-gem "rspec-rails", group: [:test, :development]
+gem "rvm-capistrano"
+gem "haml"
+gem "haml-rails"
+gem "will_paginate"
+gem "inherited_resources"
+gem "page_title_helper"
+gem "friendly_id", "~> 4.0.9"
+gem "devise"
+gem "mini_magick"
+gem "carrierwave"
+gem "nifty-generators"
+
+gem "faker", "~> 1.1.2", group: :test
+gem "capybara", "~> 2.0.2", group: :test
+gem "database_cleaner", "~> 0.9.1", group: :test
+gem "launchy", "~> 2.2.0", group: :test
+
+gem "rspec-rails", "~> 2.13.0", group: [:test, :development]
+gem "factory_girl_rails", "~> 4.2.1", group: [:test, :development]
 
 #Setup the database
 run "rm config/database.yml"
@@ -32,14 +41,15 @@ defaults: &defaults
   pool: 5
   username: #{db_user}
   password: #{db_password}
-  socket: /tmp/mysql.sock
 
 development:
   database: #{app_name.camelize(:lower)}_development
+  socket: /tmp/mysql.sock
   <<: *defaults
 
 test: &test
   database: #{app_name.camelize(:lower)}_test
+  socket: /tmp/mysql.sock
   <<: *defaults
 
 production:
@@ -51,14 +61,29 @@ CODE
 rake "db:create"
 
 #Install the gems
-if yes? "Do you want to install devise?(yes/no)"
-  gem 'devise'
-  run "bundle install"
-  generate 'devise:install'
-else
-  run "bundle install"
+generate 'nifty:layout --haml'
+remove_file 'app/views/layouts/application.html.erb' # use nifty layout instead
+generate 'nifty:config'
+generate 'rspec:install'
+inject_into_file 'spec/spec_helper.rb', "\nrequire 'factory_girl'", :after => "require 'rspec/rails'"
+inject_into_file 'config/application.rb', :after => "config.filter_parameters += [:password]" do
+  <<-eos
+
+    # Customize generators
+    config.generators do |g|
+      g.stylesheets false
+      g.test_framework :rspec,
+        fixtures: true,
+        view_specs: false,
+        helper_specs: false,
+        routing_specs: false,
+        controller_specs: true,
+        request_specs: false
+      g.fixture_replacement :factory_girl, dir: "spec/factories"
+    end
+  eos
 end
-generate "rspec:install"
+run "echo '--format documentation' >> .rspec"
 
 if yes? "Do you want to generate a root controller?(yes/no)"
   name = ask("What should it be called?").underscore
@@ -97,6 +122,7 @@ end
 #Capistrano for deploying on Digital Ocean Ubuntu Ngnix + Unicorn
 run "capify ."
 run "rm config/deploy.rb"
+gsub_file 'Capfile', /# load/, 'load'
 
 cap_server = ask("Please enter your server url")
 cap_user = ask("Please enter your server's username")
@@ -106,10 +132,14 @@ user = '#{user}'
 current_path = '#{current_path}'
 shared_path = '#{shared_path}'
 release_path = '#{release_path}'
-github_user = ask ("Please enter your Github's username")
+github_user = ask("Please enter your Github's username")
 
 file "config/deploy.rb", <<-CODE
 require "bundler/capistrano"
+require "rvm/capistrano"
+
+set :rvm_ruby_string, '1.9.3'
+set :rvm_type, :user  # Don't use system-wide RVM
 
 server "#{cap_server}", :web, :app, :db, primary: true
 
@@ -126,30 +156,42 @@ set :branch, "master"
 default_run_options[:pty] = true
 ssh_options[:forward_agent] = true
 
-after "deploy", "deploy:cleanup" # keep only the last 5 releases
+namespace :bundler do
+  desc "|DarkRecipes| Installs bundler gem to your server"
+  task :setup, :roles => :app do
+    run "if ! gem list | grep --silent -e 'bundler'; then #{try_sudo} gem uninstall bundler; #{try_sudo} gem install --no-rdoc --no-ri bundler; fi"
+  end
+
+  desc "|DarkRecipes| Runs bundle install on the app server (internal task)"
+  task :install, :roles => :app, :except => { :no_release => true } do
+    run "cd #{current_path} && bundle install --deployment --without=development test"
+  end
+end
 
 namespace :deploy do
-  %w[start stop restart].each do |command|
-    desc "#{command} unicorn server"
-    task command, roles: :app, except: {no_release: true} do
-      run "/etc/init.d/unicorn_#{application} #{command}"
-    end
+
+  desc "creates database & database user"
+
+  task :create_database do
+    set :root_password, Capistrano::CLI.password_prompt("MySQL root password: ")
+    set :db_user, Capistrano::CLI.ui.ask("Application database user: ")
+    set :db_pass, Capistrano::CLI.password_prompt("Password: ")
+    set :db_name, Capistrano::CLI.ui.ask("Database name: ")
+
+    run "mysql --user=root --password=#{root_password} -e \"CREATE DATABASE IF NOT EXISTS #{db_name}\""
+    run "mysql --user=root --password=#{root_password} -e \"GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'localhost' IDENTIFIED BY '#{db_pass}' WITH GRANT OPTION\""
   end
 
   task :setup_config, roles: :app do
-    sudo "rm /etc/nginx/sites-enabled/default"
+    if File.exist? '/etc/nginx/sites-enabled/default'
+      sudo "rm /etc/nginx/sites-enabled/default"
+    end
     sudo "ln -nfs #{current_path}/config/nginx.conf /etc/nginx/sites-enabled/#{application}"
     sudo "ln -nfs #{current_path}/config/unicorn_init.sh /etc/init.d/unicorn_#{application}"
-    run "mkdir -p #{shared_path}/config"
-    put File.read("config/database.example.yml"), "#{shared_path}/config/database.yml"
-    puts "Now edit the config files in #{shared_path}."
+    sudo "bundle install -—binstubs"
   end
+  before "deploy:cold", "deploy:create_database"
   after "deploy:setup", "deploy:setup_config"
-
-  task :symlink_config, roles: :app do
-    run "ln -nfs #{shared_path}/config/database.yml #{release_path}/config/database.yml"
-  end
-  after "deploy:finalize_update", "deploy:symlink_config"
 
   desc "Make sure local git is in sync with remote."
   task :check_revision, roles: :web do
@@ -160,6 +202,11 @@ namespace :deploy do
     end
   end
   before "deploy", "deploy:check_revision"
+  after "deploy", "deploy:restart_unicorn"
+
+  task :restart_unicorn, roles: :app do
+    sudo "service unicorn_#{application} restart"
+  end
 end
 CODE
 
@@ -203,7 +250,7 @@ pid "#{root}/tmp/pids/unicorn.pid"
 stderr_path "#{root}/log/unicorn.log"
 stdout_path "#{root}/log/unicorn.log"
 
-listen "/tmp/unicorn.blog.sock"
+listen "/tmp/unicorn.#{app_name.camelize(:lower)}.sock"
 worker_processes 2
 timeout 30
 CODE
@@ -288,11 +335,4 @@ CODE
 
 run "chmod +x config/unicorn_init.sh"
 
-git :init
-append_file ".gitignore", "config/database.yml"
-run "cp config/database.yml config/database.example.yml"
-git add: ".", commit: "-m 'initial commit'"
-#git push origin master
-if yes? "Do you want to deploy:setup?(yes/no)"
-  cap deploy:setup
-end
+remove_file 'public/index.html'
