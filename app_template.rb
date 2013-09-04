@@ -2,7 +2,7 @@
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
 
 #Setup extra gems
-gem 'bootstrap-sass', '~> 2.3.1.0', group: :assets
+gem "twitter-bootstrap-rails"
 
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
@@ -218,12 +218,12 @@ CODE
 
 #Nginx Configuration files
 file "config/nginx.conf", <<-CODE
-upstream unicorn {
+upstream #{app_name.camelize(:lower)}_app_server {
   server unix:/tmp/unicorn.#{app_name.camelize(:lower)}.sock fail_timeout=0;
 }
 
 server {
-  listen 80 default deferred;
+  listen 80;
   server_name #{cap_server};
   root /var/www/#{app_name.camelize(:lower)}/current/public;
 
@@ -233,12 +233,12 @@ server {
     add_header Cache-Control public;
   }
 
-  try_files $uri/index.html $uri @unicorn;
-  location @unicorn {
+  try_files $uri/index.html $uri @#{app_name.camelize(:lower)}_app_server;
+  location @#{app_name.camelize(:lower)}_app_server {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header Host $http_host;
     proxy_redirect off;
-    proxy_pass http://unicorn;
+    proxy_pass http://#{app_name.camelize(:lower)}_app_server;
   }
 
   error_page 500 502 503 504 /500.html;
