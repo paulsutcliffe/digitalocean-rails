@@ -2,7 +2,7 @@
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
 
 #Setup extra gems
-gem "twitter-bootstrap-rails"
+gem "twitter-bootstrap-rails", group: :assets
 
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
@@ -16,7 +16,6 @@ gem "friendly_id", "~> 4.0.9"
 gem "devise"
 gem "mini_magick"
 gem "carrierwave"
-gem "nifty-generators"
 
 gem "faker", "~> 1.1.2", group: :test
 gem "capybara", "~> 2.0.2", group: :test
@@ -60,9 +59,10 @@ CODE
 rake "db:create"
 
 #Install the gems
-generate 'nifty:layout --haml'
+generate 'bootstrap:install sass'
+generate 'bootstrap:layout application fluid'
+
 remove_file 'app/views/layouts/application.html.erb' # use nifty layout instead
-generate 'nifty:config'
 generate 'rspec:install'
 inject_into_file 'spec/spec_helper.rb', "\nrequire 'factory_girl'", :after => "require 'rspec/rails'"
 inject_into_file 'config/application.rb', :after => "config.filter_parameters += [:password]" do
@@ -190,7 +190,7 @@ namespace :deploy do
   end
 
   task :setup_config, roles: :app do
-    if File.exist? ""/etc/nginx/sites-enabled/default"
+    if File.exist? "/etc/nginx/sites-enabled/default"
       sudo "rm /etc/nginx/sites-enabled/default"
     end
     sudo "ln -nfs #{current_path}/config/nginx.conf /etc/nginx/sites-enabled/#{application}"
