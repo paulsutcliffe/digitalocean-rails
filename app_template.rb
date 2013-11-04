@@ -2,10 +2,13 @@
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
 
 #Setup extra gems
-gem "twitter-bootstrap-rails", group: :assets
-
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
+gsub_file 'Gemfile', /gem 'sass-rails',   '~> 3.2.3'/, ''
+gem "bootstrap-sass", "~> 3.0.0.0"
+gem 'sass-rails', '>= 3.2' # sass-rails needs to be higher than 3.2
+gem 'compass-rails', group: :assets
+gem "rails_layout", group: :development
 gem "rvm-capistrano"
 gem "haml"
 gem "haml-rails"
@@ -16,8 +19,7 @@ gem "friendly_id", "~> 4.0.9"
 gem "devise"
 gem "mini_magick"
 gem "carrierwave"
-
-gem "faker", "~> 1.1.2", group: :test
+gem "faker", group: :test
 gem "capybara", "~> 2.0.2", group: :test
 gem "database_cleaner", "~> 0.9.1", group: :test
 gem "launchy", "~> 2.2.0", group: :test
@@ -25,11 +27,13 @@ gem "launchy", "~> 2.2.0", group: :test
 gem "rspec-rails", "~> 2.13.0", group: [:test, :development]
 gem "factory_girl_rails", "~> 4.2.1", group: [:test, :development]
 
+run "bundle install"
+
 #Setup the database
 run "rm config/database.yml"
 
-db_user = ask("Please enter your local mysql user")
-db_password = ask("Please enter your local mysql password")
+db_user = ask("¿Cúal es tu usuario local de mysql")
+db_password = ask("Ingresa la contraseña de mysql")
 
 file "config/database.yml", <<-CODE
 defaults: &defaults
@@ -59,10 +63,8 @@ CODE
 rake "db:create"
 
 #Install the gems
-generate 'bootstrap:install sass'
-generate 'bootstrap:layout application fluid'
-
-remove_file 'app/views/layouts/application.html.erb' # use nifty layout instead
+run "rm app/views/layouts/application.html.erb"
+generate 'layout simple --force'
 generate 'rspec:install'
 inject_into_file 'spec/spec_helper.rb', "\nrequire 'factory_girl'", :after => "require 'rspec/rails'"
 inject_into_file 'config/application.rb', :after => "config.filter_parameters += [:password]" do
@@ -84,15 +86,15 @@ inject_into_file 'config/application.rb', :after => "config.filter_parameters +=
 end
 run "echo '--format documentation' >> .rspec"
 
-if yes? "Do you want to generate a root controller?(yes/no)"
-  name = ask("What should it be called?").underscore
+if ask("¿Quieres generar un controller para usarlo como root?(si/no)") == 'si'
+  name = ask("¿Cómo quieres que se llame tu controller para el root?").underscore
   generate :controller, "#{name} index"
   route "root to: '#{name}\#index'"
   remove_file "public/index.html"
 end
 
 # Setup Google Analytics
-if ask("Do you have Google Analytics key? (N/y)").upcase == 'Y'
+if ask("Tienes a la mano el key de Google Analytics? (si/no)") == 'si'
   ga_key = ask("Please provide your Google Analytics tracking key: (e.g UA-XXXXXX-XX)")
 else
   ga_key = nil
@@ -118,13 +120,39 @@ append_file "app/views/layouts/application.html.haml", <<-CODE
 CODE
 end
 
+append_file "app/assets/javascripts/application.js", <<-CODE
+//= require bootstrap
+CODE
+
+gsub_file 'app/assets/stylesheets/application.css.scss', '*= require_tree .', '*'
+
+append_file "app/assets/stylesheets/application.css.scss", <<-CODE
+@import 'bootstrap';
+@import 'compass';
+
+@import 'mixins.css.scss';
+@import 'variables.css.scss';
+@import 'fonts.css.scss';
+@import 'layout.css.scss';
+@import 'styles.css.scss';
+@import 'media_queries.css.scss';
+CODE
+
+run "touch app/assets/stylesheets/_mixins.css.scss"
+run "touch app/assets/stylesheets/_variables.css.scss"
+run "touch app/assets/stylesheets/_fonts.css.scss"
+run "touch app/assets/stylesheets/_layout.css.scss"
+run "touch app/assets/stylesheets/_styles.css.scss"
+run "touch app/assets/stylesheets/_media_queries.css.scss"
+
 #Capistrano for deploying on Digital Ocean Ubuntu Ngnix + Unicorn
 run "capify ."
 run "rm config/deploy.rb"
 gsub_file 'Capfile', /# load/, 'load'
 
-cap_server = ask("Please enter your server url")
-cap_user = ask("Please enter your server's username")
+cap_server = ask("Ingresa el url del server")
+cap_user = ask("Ingresa el username del server")
+coding = '#coding: utf-8'
 application = '#{application}'
 command = '#{command}'
 user = '#{user}'
@@ -139,6 +167,7 @@ dbpass = '#{db_pass}'
 github_user = ask("Please enter your Github's username")
 
 file "config/deploy.rb", <<-CODE
+#{coding}
 require "bundler/capistrano"
 require "rvm/capistrano"
 
@@ -185,8 +214,8 @@ namespace :deploy do
     set :db_pass, Capistrano::CLI.password_prompt("Password: ")
     set :db_name, Capistrano::CLI.ui.ask("Database name: ")
 
-    run "mysql --user=root --password=#{rootpassword} -e \"CREATE DATABASE IF NOT EXISTS #{dbname}\""
-    run "mysql --user=root --password=#{rootpassword} -e \"GRANT ALL PRIVILEGES ON #{dbname}.* TO '#{dbuser}'@'localhost' IDENTIFIED BY '#{dbpass}' WITH GRANT OPTION\""
+    run "mysql --user=root --password=#{rootpassword} -e \\"CREATE DATABASE IF NOT EXISTS #{dbname}\\""
+    run "mysql --user=root --password=#{rootpassword} -e \\"GRANT ALL PRIVILEGES ON #{dbname}.* TO '#{dbuser}'@'localhost' IDENTIFIED BY '#{dbpass}' WITH GRANT OPTION\\""
   end
 
   task :setup_config, roles: :app do
@@ -195,6 +224,8 @@ namespace :deploy do
     end
     sudo "ln -nfs #{current_path}/config/nginx.conf /etc/nginx/sites-enabled/#{application}"
     sudo "ln -nfs #{current_path}/config/unicorn_init.sh /etc/init.d/unicorn_#{application}"
+    run "cd /var/www/#{application}/current/"
+    run "bundle install --binstubs"
   end
   before "deploy:cold", "deploy:create_database"
   after "deploy:cold", "deploy:setup_config"
