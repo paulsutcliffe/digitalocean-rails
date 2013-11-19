@@ -1,0 +1,12 @@
+#region-<%= plural_table_name %>.container
+
+  .region
+    .region-title
+      %h1= page_title!('Creando <%= singular_table_name %>')
+
+  .region
+    = render 'form'
+
+  .region
+    .admin-controls
+      = link_to 'Regresar', 'javascript:history.back(-1)', class: 'btn btn-warning'

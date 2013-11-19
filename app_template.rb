@@ -1,5 +1,6 @@
 # coding: utf-8
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
+run "wget -r --no-parent 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/lib/generators' -O lib/"
 
 #Setup extra gems
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
@@ -11,7 +12,6 @@ gem 'compass-rails', group: :assets
 gem "rails_layout", group: :development
 gem "rvm-capistrano"
 gem "haml"
-gem "haml-rails"
 gem "will_paginate"
 gem "inherited_resources"
 gem "page_title_helper"
@@ -73,6 +73,7 @@ inject_into_file 'config/application.rb', :after => "config.filter_parameters +=
     # Customize generators
     config.generators do |g|
       g.stylesheets false
+      g.template_engine :haml
       g.test_framework :rspec,
         fixtures: true,
         view_specs: false,
@@ -264,10 +265,10 @@ server {
     add_header Cache-Control public;
   }
 
-  try_files $uri/index.html $uri @#{app_name.camelize(:lower)}_app_server;
+  try_filesuri/index.htmluri @#{app_name.camelize(:lower)}_app_server;
   location @#{app_name.camelize(:lower)}_app_server {
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Forproxy_add_x_forwarded_for;
+    proxy_set_header Hosthttp_host;
     proxy_redirect off;
     proxy_pass http://#{app_name.camelize(:lower)}_app_server;
   }
@@ -300,25 +301,25 @@ set -e
 TIMEOUT=${TIMEOUT-60}
 APP_ROOT=/var/www/#{app_name.camelize(:lower)}/current
 PID=$APP_ROOT/tmp/pids/unicorn.pid
-CMD="cd $APP_ROOT; bundle exec unicorn -D -c $APP_ROOT/config/unicorn.rb -E production"
+CMD="cdAPP_ROOT; bundle exec unicorn -D -cAPP_ROOT/config/unicorn.rb -E production"
 AS_USER=#{cap_user}
 set -u
 
 OLD_PIN="$PID.oldbin"
 
 sig () {
-  test -s "$PID" && kill -$1 `cat $PID`
+  test -s "$PID" && kill -$1 `catPID`
 }
 
 oldsig () {
-  test -s $OLD_PIN && kill -$1 `cat $OLD_PIN`
+  test -sOLD_PIN && kill -$1 `catOLD_PIN`
 }
 
 run () {
   if [ "$(id -un)" = "$AS_USER" ]; then
-    eval $1
+    eval1
   else
-    su -c "$1" - $AS_USER
+    su -c "$1" -AS_USER
   fi
 }
 
@@ -344,15 +345,15 @@ upgrade)
   if sig USR2 && sleep 2 && sig 0 && oldsig QUIT
   then
     n=$TIMEOUT
-    while test -s $OLD_PIN && test $n -ge 0
+    while test -sOLD_PIN && testn -ge 0
     do
-      printf '.' && sleep 1 && n=$(( $n - 1 ))
+      printf '.' && sleep 1 && n=$((n - 1 ))
     done
     echo
 
-    if test $n -lt 0 && test -s $OLD_PIN
+    if testn -lt 0 && test -sOLD_PIN
     then
-      echo >&2 "$OLD_PIN still exists after $TIMEOUT seconds"
+      echo >&2 "$OLD_PIN still exists afterTIMEOUT seconds"
       exit 1
     fi
     exit 0
@@ -364,7 +365,7 @@ reopen-logs)
   sig USR1
   ;;
 *)
-  echo >&2 "Usage: $0 <start|stop|restart|upgrade|force-stop|reopen-logs>"
+  echo >&2 "Usage:0 <start|stop|restart|upgrade|force-stop|reopen-logs>"
   exit 1
   ;;
 esac
