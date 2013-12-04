@@ -12,6 +12,7 @@ gem 'compass-rails', group: :assets
 gem "rails_layout", group: :development
 gem "rvm-capistrano"
 gem "haml"
+gem "scaffold-bootstrap3"
 gem "will_paginate"
 gem "inherited_resources"
 gem "page_title_helper"
@@ -73,7 +74,6 @@ inject_into_file 'config/application.rb', :after => "config.filter_parameters +=
     # Customize generators
     config.generators do |g|
       g.stylesheets false
-      g.template_engine :haml
       g.test_framework :rspec,
         fixtures: true,
         view_specs: false,
@@ -96,22 +96,22 @@ end
 
 # Setup Google Analytics
 if ask("Tienes a la mano el key de Google Analytics? (si/no)") == 'si'
-  ga_key = ask("Please provide your Google Analytics tracking key: (e.g UA-XXXXXX-XX)")
+  ga_key = ask("¿Cual es el tracking key de Google Analytics: (ejemplo: UA-46217331-1)")
+  ga_domain = ask("¿Cual es el dominio configurado en Google Analytics:")
 else
   ga_key = nil
 end
 
 file "app/views/shared/_google_analytics.html.erb", <<-CODE
-<script type="text/javascript" charset="utf-8">
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', '#{ga_key || "INSERT-URCHIN-CODE"}']);
-  _gaq.push(['_trackPageview']);
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
+  ga('create', '#{ga_key || "INSERT-URCHIN-CODE"}', 'onebybach.com');
+  ga('send', 'pageview');
+
 </script>
 CODE
 
