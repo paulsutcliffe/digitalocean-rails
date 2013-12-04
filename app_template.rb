@@ -6,9 +6,9 @@ run "wget -r --no-parent 'https://raw.github.com/paulsutcliffe/digitalocean-rail
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
 gsub_file 'Gemfile', /gem 'sass-rails',   '~> 3.2.3'/, ''
-gem "bootstrap-sass", "~> 3.0.0.0"
-gem 'sass-rails', '>= 3.2' # sass-rails needs to be higher than 3.2
-gem 'compass-rails', group: :assets
+gem "bootstrap-sass", "~> 3.0.2.1"
+gem "sass-rails", "~> 3.2.6" # sass-rails needs to be higher than 3.2
+gem "compass-rails", group: :assets
 gem "rails_layout", group: :development
 gem "rvm-capistrano"
 gem "haml"
@@ -16,7 +16,7 @@ gem "scaffold-bootstrap3"
 gem "will_paginate"
 gem "inherited_resources"
 gem "page_title_helper"
-gem "friendly_id", "~> 4.0.9"
+gem "friendly_id", "~> 4.0.10"
 gem "devise"
 gem "mini_magick"
 gem "carrierwave"
@@ -74,6 +74,7 @@ inject_into_file 'config/application.rb', :after => "config.filter_parameters +=
     # Customize generators
     config.generators do |g|
       g.stylesheets false
+      g.javascripts false
       g.test_framework :rspec,
         fixtures: true,
         view_specs: false,
