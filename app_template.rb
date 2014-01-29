@@ -1,32 +1,27 @@
 # coding: utf-8
 run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/public/humans.txt' -O public/humans.txt"
-run "wget -r --no-parent 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/lib/generators' -O lib/"
 
 #Setup extra gems
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
-gsub_file 'Gemfile', /gem 'sass-rails',   '~> 3.2.3'/, ''
-gem "bootstrap-sass", "~> 3.0.2.1"
-gem "sass-rails", "~> 3.2.6" # sass-rails needs to be higher than 3.2
+gem 'bootstrap-sass', '~> 3.0.3.0'
 gem "compass-rails", group: :assets
-gem "rails_layout", group: :development
-gem "rvm-capistrano"
-gem "haml"
-gem "scaffold-bootstrap3"
-gem "will_paginate"
-gem "inherited_resources"
-gem "page_title_helper"
-gem "friendly_id", "~> 4.0.10"
-gem "devise"
-gem "mini_magick"
-gem "carrierwave"
-gem "faker", group: :test
-gem "capybara", "~> 2.0.2", group: :test
-gem "database_cleaner", "~> 0.9.1", group: :test
-gem "launchy", "~> 2.2.0", group: :test
+gem 'rails_layout', group: :development
+gem 'rvm-capistrano'
+gem 'haml'
+gem 'scaffold-bootstrap3'
+gem 'inherited_resources'
+gem 'page_title_helper'
+gem 'friendly_id', '~> 5.0.0'
+gem 'devise'
+gem 'mini_magick'
+gem 'carrierwave'
+gem 'fake', group: :test
+gem 'capybara', '~> 2.2.1', group: :test
+gem 'launchy', '~> 2.4.2', group: :test
 
-gem "rspec-rails", "~> 2.13.0", group: [:test, :development]
-gem "factory_girl_rails", "~> 4.2.1", group: [:test, :development]
+gem 'rspec-rails', '~> 3.0.0.beta', group: [:test, :development]
+gem 'factory_girl_rails', '~> 4.3.0', group: [:test, :development]
 
 run "bundle install"
 
@@ -65,7 +60,10 @@ rake "db:create"
 
 #Install the gems
 run "rm app/views/layouts/application.html.erb"
-generate 'layout simple --force'
+run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/application.html.haml' -O app/views/layouts/application.html.haml"
+run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/_navigation.html.haml' -O app/views/layouts/_navigation.html.haml"
+run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitalocean-rails/master/_messages.html.haml' -O app/views/layouts/_messages.html.haml"
+
 generate 'rspec:install'
 inject_into_file 'spec/spec_helper.rb', "\nrequire 'factory_girl'", :after => "require 'rspec/rails'"
 inject_into_file 'config/application.rb', :after => "config.filter_parameters += [:password]" do
@@ -92,7 +90,6 @@ if ask("¿Quieres generar un controller para usarlo como root?(si/no)") == 'si'
   name = ask("¿Cómo quieres que se llame tu controller para el root?").underscore
   generate :controller, "#{name} index"
   route "root to: '#{name}\#index'"
-  remove_file "public/index.html"
 end
 
 # Setup Google Analytics
@@ -110,7 +107,7 @@ file "app/views/shared/_google_analytics.html.erb", <<-CODE
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
   })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-  ga('create', '#{ga_key || "INSERT-URCHIN-CODE"}', 'onebybach.com');
+  ga('create', '#{ga_key || "INSERT-URCHIN-CODE"}', '#{ga_domain || "INSERT-DOMAIN-HERE"}');
   ga('send', 'pageview');
 
 </script>
@@ -125,6 +122,8 @@ end
 append_file "app/assets/javascripts/application.js", <<-CODE
 //= require bootstrap
 CODE
+
+run "move app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
 
 gsub_file 'app/assets/stylesheets/application.css.scss', '*= require_tree .', '*'
 
@@ -164,6 +163,7 @@ release_path = '#{release_path}'
 trysudo = '#{try_sudo}'
 latest_release = '#{latest_release}'
 rails_env = '#{rails_env}'
+asset_env = '#{asset_env}'
 rake = '#{rake}'
 rootpassword = '#{root_password}'
 source_local = '#{source.local.log(from)}'
@@ -177,7 +177,7 @@ file "config/deploy.rb", <<-CODE
 require "bundler/capistrano"
 require "rvm/capistrano"
 
-set :rvm_ruby_string, '1.9.3'
+set :rvm_ruby_string, '2.1.0'
 set :rvm_type, :user  # Don't use system-wide RVM
 
 server "#{cap_server}", :web, :app, :db, primary: true
@@ -211,17 +211,6 @@ namespace :bundler do
 end
 
 namespace :deploy do
-
-  namespace :assets do
-    task :precompile, :roles => :web, :except => { :no_release => true } do
-      from = source.next_revision(current_revision)
-      if capture("cd #{latest_release} && #{source_local} vendor/assets/ app/assets/ | wc -l").to_i > 0
-        run %Q{cd #{latest_release} && #{rake} RAILS_ENV=#{rails_env} #{asset_env} assets:precompile}
-      else
-        logger.info "Skipping asset pre-compilation because there were no asset changes"
-      end
-    end
-  end
 
   desc "creates database & database user"
 
@@ -281,10 +270,10 @@ server {
     add_header Cache-Control public;
   }
 
-  try_filesuri/index.htmluri @#{app_name.camelize(:lower)}_app_server;
+  try_files $uri/index.html $uri @#{app_name.camelize(:lower)}_app_server;
   location @#{app_name.camelize(:lower)}_app_server {
-    proxy_set_header X-Forwarded-Forproxy_add_x_forwarded_for;
-    proxy_set_header Hosthttp_host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
     proxy_redirect off;
     proxy_pass http://#{app_name.camelize(:lower)}_app_server;
   }
@@ -317,25 +306,25 @@ set -e
 TIMEOUT=${TIMEOUT-60}
 APP_ROOT=/var/www/#{app_name.camelize(:lower)}/current
 PID=$APP_ROOT/tmp/pids/unicorn.pid
-CMD="cdAPP_ROOT; bundle exec unicorn -D -cAPP_ROOT/config/unicorn.rb -E production"
+CMD="cd $APP_ROOT; bundle exec unicorn -D -c $APP_ROOT/config/unicorn.rb -E production"
 AS_USER=#{cap_user}
 set -u
 
 OLD_PIN="$PID.oldbin"
 
 sig () {
-  test -s "$PID" && kill -$1 `catPID`
+  test -s "$PID" && kill -$1 `cat $PID`
 }
 
 oldsig () {
-  test -sOLD_PIN && kill -$1 `catOLD_PIN`
+  test -s $OLD_PIN && kill -$1 `cat $OLD_PIN`
 }
 
 run () {
   if [ "$(id -un)" = "$AS_USER" ]; then
-    eval1
+    eval $1
   else
-    su -c "$1" -AS_USER
+    su -c "$1" - $AS_USER
   fi
 }
 
@@ -361,15 +350,15 @@ upgrade)
   if sig USR2 && sleep 2 && sig 0 && oldsig QUIT
   then
     n=$TIMEOUT
-    while test -sOLD_PIN && testn -ge 0
+    while test -s $OLD_PIN && test $n -ge 0
     do
-      printf '.' && sleep 1 && n=$((n - 1 ))
+      printf '.' && sleep 1 && n=$(( $n - 1 ))
     done
     echo
 
-    if testn -lt 0 && test -sOLD_PIN
+    if test $n -lt 0 && test -s $OLD_PIN
     then
-      echo >&2 "$OLD_PIN still exists afterTIMEOUT seconds"
+      echo >&2 "$OLD_PIN still exists after $TIMEOUT seconds"
       exit 1
     fi
     exit 0
@@ -381,12 +370,10 @@ reopen-logs)
   sig USR1
   ;;
 *)
-  echo >&2 "Usage:0 <start|stop|restart|upgrade|force-stop|reopen-logs>"
+  echo >&2 "Usage: $0 <start|stop|restart|upgrade|force-stop|reopen-logs>"
   exit 1
   ;;
 esac
 CODE
 
 run "chmod +x config/unicorn_init.sh"
-
-remove_file 'public/index.html'
