@@ -123,13 +123,12 @@ append_file "app/assets/javascripts/application.js", <<-CODE
 //= require bootstrap
 CODE
 
-run "move app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
+run "mv app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
 
 gsub_file 'app/assets/stylesheets/application.css.scss', '*= require_tree .', '*'
 
 append_file "app/assets/stylesheets/application.css.scss", <<-CODE
 @import 'bootstrap';
-@import 'compass';
 
 @import 'mixins.css.scss';
 @import 'variables.css.scss';
@@ -377,3 +376,7 @@ esac
 CODE
 
 run "chmod +x config/unicorn_init.sh"
+
+run "wget --no-check-certificate 'https://raw.github.com/svenfuchs/rails-i18n/master/rails/locale/es-PE.yml' -O config/locale/es.yml"
+run "wget --no-check-certificate 'https://gist.github.com/Theby/8278002/raw/81666c5519aa2adaf0957ac90dff58d1522968e4/devise.es.yml' -O config/locale/devise.es.yml"
+
