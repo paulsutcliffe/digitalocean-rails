@@ -4,7 +4,7 @@ run "wget --no-check-certificate 'https://raw.github.com/paulsutcliffe/digitaloc
 #Setup extra gems
 gsub_file 'Gemfile', /# gem 'capistrano'/, 'gem "capistrano"'
 gsub_file 'Gemfile', /# gem 'unicorn'/, 'gem "unicorn"'
-gem 'bootstrap-sass', '~> 3.0.3.0'
+gem 'bootstrap-sass', '~> 3.1.1.1'
 gem "compass-rails", group: :assets
 gem 'rails_layout', group: :development
 gem 'rvm-capistrano'
